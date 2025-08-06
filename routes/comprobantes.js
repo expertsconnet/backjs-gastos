@@ -4,32 +4,37 @@ import { pool } from '../config/db.js';
 
 const router = express.Router();
 
-// 🔧 Configuración de multer con límite de 10 MB
+// 🔧 Configuración de multer con límite de 10 MB por archivo
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB
+  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB por archivo
 });
 
-// 🔻 Subir comprobante (imagen) asociado a un gasto
-router.post('/:gasto_id', upload.single('imagen'), async (req, res) => {
+// 🔻 Subir múltiples comprobantes para un gasto
+router.post('/:gasto_id', upload.array('imagenes', 10), async (req, res) => {
   const { gasto_id } = req.params;
-  const file = req.file;
+  const files = req.files;
 
-  if (!file) {
-    return res.status(400).json({ error: 'No se envió ningún archivo' });
+  if (!files || files.length === 0) {
+    return res.status(400).json({ error: 'No se enviaron archivos' });
   }
 
   try {
-    const [result] = await pool.query(
-      `INSERT INTO comprobantes (gasto_id, imagen, tipo_mime, fecha_subida) VALUES (?, ?, ?, NOW())`,
-      [gasto_id, file.buffer, file.mimetype]
-    );
+    const insertResults = [];
 
-    res.json({ id: result.insertId, mensaje: 'Imagen guardada en la base de datos correctamente.' });
+    for (const file of files) {
+      const [result] = await pool.query(
+        `INSERT INTO comprobantes (gasto_id, imagen, tipo_mime, fecha_subida) VALUES (?, ?, ?, NOW())`,
+        [gasto_id, file.buffer, file.mimetype]
+      );
+      insertResults.push({ id: result.insertId });
+    }
+
+    res.json({ mensaje: 'Comprobantes guardados correctamente.', insertados: insertResults });
   } catch (error) {
-    console.error('Error al subir comprobante:', error);
-    res.status(500).json({ error: 'Error al guardar la imagen en la base de datos.' });
+    console.error('Error al subir múltiples comprobantes:', error);
+    res.status(500).json({ error: 'Error al guardar los comprobantes' });
   }
 });
 
@@ -69,7 +74,7 @@ router.get('/ver/:id', async (req, res) => {
   }
 });
 
-// 🔻 Actualizar imagen de comprobante
+// 🔻 Actualizar imagen de comprobante por ID
 router.put('/:id', upload.single('imagen'), async (req, res) => {
   const { id } = req.params;
   const file = req.file;
