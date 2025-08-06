@@ -14,8 +14,7 @@ const corsOptions = {
     'http://localhost:5173',
     'http://localhost:3000',
     'http://127.0.0.1:5500',
-    'https://itecsolutions.onrender.com
-    '
+    'https://itecsolutions.onrender.com'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
